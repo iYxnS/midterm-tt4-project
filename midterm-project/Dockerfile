@@ -1,11 +1,12 @@
 # Layer 1
 FROM node:lts-alpine AS builder
 WORKDIR /app
+
 COPY ./app/package*.json ./
 RUN npm install
+
 COPY ./app/ ./
-RUN npm run build 
-# in the end I have the /dist
+RUN npm run build
 
 # Layer 2
 FROM debian:bookworm-slim
@@ -22,21 +23,19 @@ RUN npm install -g pm2
 
 WORKDIR /app
 
-## API
 COPY ./api/index.js /app/
 COPY ./api/package*.json /app/
 RUN npm install
 
-# APP
-COPY --from=builder ./app/dist /var/www/html
+COPY --from=builder /app/dist /var/www/html
 
-#
 COPY ./default.conf /etc/nginx/sites-available/default
+RUN ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/
 
-RUN echo "API_PORT=3000" >> /app/.env
-
-# EXPOSE ??
+# Ensure Nginx serves on the default port
+EXPOSE 80
 
 COPY ./entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
 ENTRYPOINT ["/entrypoint.sh"]
